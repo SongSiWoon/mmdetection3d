@@ -13,6 +13,7 @@ from tools.dataset_converters.create_gt_database import (
     GTDatabaseCreater, create_groundtruth_database)
 from tools.dataset_converters.update_infos_to_v2 import update_pkl_infos
 
+from pathlib import Path
 
 def kitti_data_prep(root_path,
                     info_prefix,
@@ -265,6 +266,41 @@ def semantickitti_data_prep(info_prefix, out_dir):
         info_prefix, out_dir)
 
 
+def wildscenes_data_prep(root_path, info_prefix, out_dir, split_dir, overwrite=True):
+    """Prepare WildScenes dataset.
+
+    Args:
+        root_path (str): Path of dataset root.
+        info_prefix (str): The prefix of info filenames.
+        out_dir (str): Output directory of the processed data.
+        split_dir (str): Directory containing split information.
+        overwrite (bool): Whether to overwrite existing processed data.
+    """
+    from tools.dataset_converters import wildscenes_converter
+
+    print('Setting up WildScenes 3D data...')
+    opt3d_path = Path(out_dir) / "wildscenes_opt3d"
+
+    if overwrite or not opt3d_path.exists():
+        wildscenes_converter.create_wildscenes_info_file(
+            splitdir=Path(split_dir) / "opt3d",
+            dset_path=Path(root_path) / "WildScenesDatasets/data/WildScenes/",
+            pkl_prefix=info_prefix,
+            save_path=opt3d_path
+        )
+
+    print('Setting up WildScenes 2D data...')
+    opt2d_path = Path(out_dir) / "wildscenes_opt2d"
+    if overwrite or not opt2d_path.exists():
+        wildscenes_converter.create_mmseg_filestructure(
+            split_dir=Path(split_dir) / "opt2d",
+            dataset_dir=Path(root_path) / "WildScenesDatasets/data/WildScenes/",
+            save_path=opt2d_path
+        )
+
+    print('WildScenes data preparation complete.')
+
+
 parser = argparse.ArgumentParser(description='Data converter arg parser')
 parser.add_argument('dataset', metavar='kitti', help='name of the dataset')
 parser.add_argument(
@@ -416,5 +452,12 @@ if __name__ == '__main__':
     elif args.dataset == 'semantickitti':
         semantickitti_data_prep(
             info_prefix=args.extra_tag, out_dir=args.out_dir)
+    elif args.dataset == 'wildscenes':
+        wildscenes_data_prep(
+            root_path=args.root_path,
+            info_prefix=args.extra_tag,
+            out_dir=args.out_dir,
+            split_dir=osp.join(args.root_path, 'meta_data'),
+        )
     else:
         raise NotImplementedError(f'Don\'t support {args.dataset} dataset.')
